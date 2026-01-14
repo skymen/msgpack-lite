@@ -4,26 +4,26 @@
 
 var assert = require("assert");
 var msgpackJS = "../index";
-var isBrowser = ("undefined" !== typeof window);
-var msgpack = isBrowser && window.msgpack || require(msgpackJS);
+var isBrowser = "undefined" !== typeof window;
+var msgpack = (isBrowser && window.msgpack) || require(msgpackJS);
 var TITLE = __filename.replace(/^.*\//, "");
-var HAS_BIGINT = ("undefined" !== typeof BigInt);
+var HAS_BIGINT = "undefined" !== typeof BigInt;
 
-describe(TITLE, function() {
+describe(TITLE, function () {
   var options = {};
 
   if (!HAS_BIGINT) {
-    it.skip("BigInt not supported in this environment", function() {});
+    it.skip("BigInt not supported in this environment", function () {});
     return;
   }
 
-  it("createCodec({bigint: true})", function() {
-    var codec = msgpack.createCodec({bigint: true});
+  it("createCodec({bigint: true})", function () {
+    var codec = msgpack.createCodec({ bigint: true });
     assert.ok(codec);
     options.codec = codec;
   });
 
-  it("encode/decode positive BigInt values", function() {
+  it("encode/decode positive BigInt values", function () {
     [
       0n,
       1n,
@@ -38,16 +38,24 @@ describe(TITLE, function() {
       BigInt(Number.MAX_SAFE_INTEGER),
       BigInt(Number.MAX_SAFE_INTEGER) + 1n,
       BigInt("9007199254740993"), // MAX_SAFE_INTEGER + 2
-      BigInt("18446744073709551615") // max uint64
-    ].forEach(function(value) {
+      BigInt("18446744073709551615"), // max uint64
+    ].forEach(function (value) {
       var encoded = msgpack.encode(value, options);
       var decoded = msgpack.decode(encoded, options);
-      assert.strictEqual(decoded, value, "Failed for value: " + value.toString());
-      assert.strictEqual(typeof decoded, "bigint", "Decoded value should be bigint");
+      assert.strictEqual(
+        decoded,
+        value,
+        "Failed for value: " + value.toString()
+      );
+      assert.strictEqual(
+        typeof decoded,
+        "bigint",
+        "Decoded value should be bigint"
+      );
     });
   });
 
-  it("encode/decode negative BigInt values", function() {
+  it("encode/decode negative BigInt values", function () {
     [
       -1n,
       -32n, // min fixint
@@ -59,71 +67,79 @@ describe(TITLE, function() {
       -2147483648n, // max int32 range
       -2147483649n, // min int64 range
       BigInt("-9007199254740993"), // -(MAX_SAFE_INTEGER + 2)
-      BigInt("-9223372036854775808") // min int64
-    ].forEach(function(value) {
+      BigInt("-9223372036854775808"), // min int64
+    ].forEach(function (value) {
       var encoded = msgpack.encode(value, options);
       var decoded = msgpack.decode(encoded, options);
-      assert.strictEqual(decoded, value, "Failed for value: " + value.toString());
-      assert.strictEqual(typeof decoded, "bigint", "Decoded value should be bigint");
+      assert.strictEqual(
+        decoded,
+        value,
+        "Failed for value: " + value.toString()
+      );
+      assert.strictEqual(
+        typeof decoded,
+        "bigint",
+        "Decoded value should be bigint"
+      );
     });
   });
 
-  it("encode BigInt with correct type tags", function() {
-    // Test fixint
+  it("encode BigInt with correct type tags", function () {
+    // All BigInt values are now encoded as uint64 (0xcf) or int64 (0xd3)
+    // This ensures they can be properly decoded back as BigInt
+
+    // Test positive values - should all use uint64 (0xcf)
     var encoded = msgpack.encode(0n, options);
-    assert.strictEqual(encoded[0], 0x00);
+    assert.strictEqual(encoded[0], 0xcf);
+    assert.strictEqual(encoded.length, 9);
 
     encoded = msgpack.encode(127n, options);
-    assert.strictEqual(encoded[0], 0x7f);
+    assert.strictEqual(encoded[0], 0xcf);
+    assert.strictEqual(encoded.length, 9);
 
-    encoded = msgpack.encode(-1n, options);
-    assert.strictEqual(encoded[0], 0xff);
-
-    encoded = msgpack.encode(-32n, options);
-    assert.strictEqual(encoded[0], 0xe0);
-
-    // Test uint8
     encoded = msgpack.encode(255n, options);
-    assert.strictEqual(encoded[0], 0xcc);
-    assert.strictEqual(encoded.length, 2);
+    assert.strictEqual(encoded[0], 0xcf);
+    assert.strictEqual(encoded.length, 9);
 
-    // Test uint16
     encoded = msgpack.encode(65535n, options);
-    assert.strictEqual(encoded[0], 0xcd);
-    assert.strictEqual(encoded.length, 3);
+    assert.strictEqual(encoded[0], 0xcf);
+    assert.strictEqual(encoded.length, 9);
 
-    // Test uint32
     encoded = msgpack.encode(4294967295n, options);
-    assert.strictEqual(encoded[0], 0xce);
-    assert.strictEqual(encoded.length, 5);
+    assert.strictEqual(encoded[0], 0xcf);
+    assert.strictEqual(encoded.length, 9);
 
-    // Test uint64
     encoded = msgpack.encode(4294967296n, options);
     assert.strictEqual(encoded[0], 0xcf);
     assert.strictEqual(encoded.length, 9);
 
-    // Test int8
+    // Test negative values - should all use int64 (0xd3)
+    encoded = msgpack.encode(-1n, options);
+    assert.strictEqual(encoded[0], 0xd3);
+    assert.strictEqual(encoded.length, 9);
+
+    encoded = msgpack.encode(-32n, options);
+    assert.strictEqual(encoded[0], 0xd3);
+    assert.strictEqual(encoded.length, 9);
+
     encoded = msgpack.encode(-128n, options);
-    assert.strictEqual(encoded[0], 0xd0);
-    assert.strictEqual(encoded.length, 2);
+    assert.strictEqual(encoded[0], 0xd3);
+    assert.strictEqual(encoded.length, 9);
 
-    // Test int16
     encoded = msgpack.encode(-32768n, options);
-    assert.strictEqual(encoded[0], 0xd1);
-    assert.strictEqual(encoded.length, 3);
+    assert.strictEqual(encoded[0], 0xd3);
+    assert.strictEqual(encoded.length, 9);
 
-    // Test int32
     encoded = msgpack.encode(-2147483648n, options);
-    assert.strictEqual(encoded[0], 0xd2);
-    assert.strictEqual(encoded.length, 5);
+    assert.strictEqual(encoded[0], 0xd3);
+    assert.strictEqual(encoded.length, 9);
 
-    // Test int64
     encoded = msgpack.encode(-2147483649n, options);
     assert.strictEqual(encoded[0], 0xd3);
     assert.strictEqual(encoded.length, 9);
   });
 
-  it("round-trip conversion", function() {
+  it("round-trip conversion", function () {
     var testValues = [
       0n,
       1n,
@@ -131,21 +147,21 @@ describe(TITLE, function() {
       BigInt(Number.MAX_SAFE_INTEGER),
       BigInt(Number.MAX_SAFE_INTEGER) + 1n,
       BigInt("-9223372036854775808"), // min int64
-      BigInt("18446744073709551615") // max uint64
+      BigInt("18446744073709551615"), // max uint64
     ];
 
-    testValues.forEach(function(value) {
+    testValues.forEach(function (value) {
       var encoded = msgpack.encode(value, options);
       var decoded = msgpack.decode(encoded, options);
       assert.strictEqual(decoded, value);
     });
   });
 
-  it("encode BigInt in objects and arrays", function() {
+  it("encode BigInt in objects and arrays", function () {
     var obj = {
       smallInt: 42n,
       bigInt: BigInt("9007199254740993"),
-      negative: -100n
+      negative: -100n,
     };
 
     var encoded = msgpack.encode(obj, options);
@@ -164,12 +180,23 @@ describe(TITLE, function() {
     assert.strictEqual(decoded[2], BigInt("9007199254740993"));
   });
 
-  it("decode without bigint option returns Number", function() {
+  it("decode with default codec returns BigInt", function () {
     var value = BigInt("9007199254740993");
     var encoded = msgpack.encode(value, options);
-    
-    // Decode without bigint option
+
+    // Decode with default codec (bigint is now enabled by default)
     var decoded = msgpack.decode(encoded);
+    assert.strictEqual(typeof decoded, "bigint");
+    assert.strictEqual(decoded, value);
+  });
+
+  it("decode with bigint:false returns Number", function () {
+    var value = BigInt("9007199254740993");
+    var encoded = msgpack.encode(value, options);
+
+    // Explicitly disable bigint decoding
+    var codec = msgpack.createCodec({ bigint: false });
+    var decoded = msgpack.decode(encoded, { codec: codec });
     assert.strictEqual(typeof decoded, "number");
     // Note: This will lose precision for values outside safe integer range
   });
