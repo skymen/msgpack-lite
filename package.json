@@ -36,11 +36,12 @@
   },
   "homepage": "https://github.com/kawanet/msgpack-lite",
   "jshintConfig": {
-    "es3": true,
+    "esversion": 6,
     "globals": {
       "JSON": true,
       "Symbol": true,
       "Map": true,
+      "BigInt": true,
       "window": true
     },
     "mocha": true,

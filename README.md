@@ -29,6 +29,21 @@ var data = msgpack.decode(buffer); // => {"foo": "bar"}
 // if encode/decode receives an invalid argument an error is thrown
 ```
 
+### Encoding and Decoding with BigInt
+
+```js
+var msgpack = require("msgpack-lite");
+
+// Create codec with BigInt support
+var codec = msgpack.createCodec({bigint: true});
+
+// encode BigInt values
+var buffer = msgpack.encode(12345678901234567890n, {codec: codec});
+
+// decode to BigInt
+var data = msgpack.decode(buffer, {codec: codec}); // => 12345678901234567890n
+```
+
 ### Writing to MessagePack Stream
 
 ```js
@@ -246,6 +261,7 @@ null, undefined|nil format family|null
 Boolean (true, false)|bool format family|Boolean (true, false)
 Number (32bit int)|int format family|Number (int or double)
 Number (64bit double)|float format family|Number (double)
+BigInt|int format family|Number (int or double) or BigInt (if `bigint=true`)
 String|str format family|String
 Buffer|bin format family|Buffer
 Array|array format family|Array
@@ -255,6 +271,8 @@ Object (see below)|ext format family|Object (see below)
 
 Note that both `null` and `undefined` are mapped to nil `0xC1` type.
 This means `undefined` value will be *upgraded* to `null` in other words.
+
+When encoding BigInt values, the library automatically selects the most compact MessagePack integer format that can represent the value (fixint, uint8/16/32/64, or int8/16/32/64). When decoding, integers are returned as Number by default, or as BigInt when using the `bigint` codec option.
 
 ### Extension Types
 
@@ -358,6 +376,21 @@ var codec = msgpack.createCodec({useraw: true});
 
 ```js
 var codec = msgpack.createCodec({int64: true});
+```
+
+`bigint`: It encodes and decodes JavaScript BigInt values to/from msgpack's `int64`/`uint64` formats natively. This is useful for handling integers larger than `Number.MAX_SAFE_INTEGER` (2^53-1) without losing precision. Requires ES2020+ or Node.js 10.4.0+.
+
+```js
+var codec = msgpack.createCodec({bigint: true});
+
+// Encoding BigInt values
+var encoded = msgpack.encode(12345678901234567890n, {codec: codec});
+
+// Decoding to BigInt
+var decoded = msgpack.decode(encoded, {codec: codec}); // => 12345678901234567890n (BigInt)
+
+// Without bigint option, large integers may lose precision
+var normalDecoded = msgpack.decode(encoded); // => loses precision for values > MAX_SAFE_INTEGER
 ```
 
 `binarraybuffer`: It ties msgpack's `bin` format with `ArrayBuffer` object, instead of `Buffer` object.
