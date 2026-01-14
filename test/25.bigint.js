@@ -51,13 +51,13 @@ describe(TITLE, function() {
     [
       -1n,
       -32n, // min fixint
-      -33n, // max int8
-      -128n, // min int8
-      -129n, // max int16
-      -32768n, // min int16
-      -32769n, // max int32
-      -2147483648n, // min int32
-      -2147483649n, // max int64
+      -33n, // min int8 range (outside fixint)
+      -128n, // max int8 range
+      -129n, // min int16 range
+      -32768n, // max int16 range
+      -32769n, // min int32 range
+      -2147483648n, // max int32 range
+      -2147483649n, // min int64 range
       BigInt("-9007199254740993"), // -(MAX_SAFE_INTEGER + 2)
       BigInt("-9223372036854775808") // min int64
     ].forEach(function(value) {
